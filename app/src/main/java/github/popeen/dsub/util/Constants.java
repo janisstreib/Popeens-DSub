@@ -82,6 +82,7 @@ public final class Constants {
     public static final String PREFERENCES_KEY_SERVER_INSTANCE = "serverInstanceId";
     public static final String PREFERENCES_KEY_SERVER_NAME = "serverName";
     public static final String PREFERENCES_KEY_SERVER_URL = "serverUrl";
+	public static final String PREFERENCES_KEY_SERVER_VERIFY_CERT = "serverVerifyCert";
 	public static final String PREFERENCES_KEY_SERVER_INTERNAL_URL = "serverInternalUrl";
 	public static final String PREFERENCES_KEY_SERVER_LOCAL_NETWORK_SSID = "serverLocalNetworkSSID";
 	public static final String PREFERENCES_KEY_TEST_CONNECTION = "serverTestConnection";

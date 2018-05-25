@@ -106,6 +106,7 @@ public class RESTMusicService implements MusicService {
     private static final int HTTP_REQUEST_MAX_ATTEMPTS = 5;
     private static final long REDIRECTION_CHECK_INTERVAL_MILLIS = 60L * 60L * 1000L;
 
+	private SSLSocketFactory trustAllSslSocketFactory;
 	private SSLSocketFactory sslSocketFactory;
 	private HostnameVerifier selfSignedHostnameVerifier;
     private long redirectionLastChecked;
@@ -130,9 +131,11 @@ public class RESTMusicService implements MusicService {
 			}
 		};
 		try {
-			SSLContext sslContext = SSLContext.getInstance("TLS");
-			sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-			sslSocketFactory = sslContext.getSocketFactory();
+			SSLContext trustAllSslContext = SSLContext.getInstance("TLS");
+			trustAllSslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+			trustAllSslSocketFactory = trustAllSslContext.getSocketFactory();
+			sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+
 		} catch (Exception e) {
 		}
 
@@ -808,7 +811,7 @@ public class RESTMusicService implements MusicService {
 			List<String> parameterNames = Arrays.asList("id");
 			List<Object> parameterValues = Arrays.<Object>asList(entry.getCoverArt());
 
-			return getBitmapFromUrl(context, url, parameterNames, parameterValues, size, FileUtil.getAlbumArtFile(context, entry), true, progressListener, task);
+			return getBitmapFromUrl(context, url, parameterNames, parameterValues, size, FileUtil.getAlbumArtFile(context, entry), true, progressListener, task, Util.shouldVerifyServerCert(context));
         }
     }
 
@@ -850,7 +853,7 @@ public class RESTMusicService implements MusicService {
 		// to avoid the thrashing effect seen when offset is combined with transcoding/downsampling on the server.
 		// In that case, the server uses a long time before sending any data, causing the client to time out.
 		int timeout = (int) (SOCKET_READ_TIMEOUT_DOWNLOAD + offset * TIMEOUT_MILLIS_PER_OFFSET_BYTE);
-		HttpURLConnection connection = getConnection(context, url, parameterNames, parameterValues, headers, timeout);
+		HttpURLConnection connection = getConnection(context, url, parameterNames, parameterValues, headers, timeout, Util.shouldVerifyServerCert(context));
 
 		// If content type is XML, an error occurred.  Get it.
 		String contentType = connection.getContentType();
@@ -1507,7 +1510,7 @@ public class RESTMusicService implements MusicService {
 			List<String> parameterNames = Collections.singletonList("username");
 			List<Object> parameterValues = Arrays.<Object>asList(username);
 
-			return getBitmapFromUrl(context, url, parameterNames, parameterValues, size, FileUtil.getAvatarFile(context, username), false, progressListener, task);
+			return getBitmapFromUrl(context, url, parameterNames, parameterValues, size, FileUtil.getAvatarFile(context, username), false, progressListener, task, Util.shouldVerifyServerCert(context));
 		}
 	}
 
@@ -1539,7 +1542,7 @@ public class RESTMusicService implements MusicService {
 	public Bitmap getBitmap(String url, int size, Context context, ProgressListener progressListener, SilentBackgroundTask task) throws Exception {
 		// Synchronize on the url so that we don't download concurrently
 		synchronized (url) {
-			return getBitmapFromUrl(context, url, null, null, size, FileUtil.getMiscFile(context, url), false, progressListener, task);
+			return getBitmapFromUrl(context, url, null, null, size, FileUtil.getMiscFile(context, url), false, progressListener, task, Util.shouldVerifyServerCert(context));
 		}
 	}
 
@@ -1713,10 +1716,10 @@ public class RESTMusicService implements MusicService {
 		this.instance = instance;
 	}
 
-	protected Bitmap getBitmapFromUrl(Context context, String url, List<String> parameterNames, List<Object> parameterValues, int size, File saveToFile, boolean allowUnscaled, ProgressListener progressListener, SilentBackgroundTask task) throws Exception {
+	protected Bitmap getBitmapFromUrl(Context context, String url, List<String> parameterNames, List<Object> parameterValues, int size, File saveToFile, boolean allowUnscaled, ProgressListener progressListener, SilentBackgroundTask task, boolean verify) throws Exception {
 		InputStream in = null;
 		try {
-			HttpURLConnection connection = getConnection(context, url, parameterNames, parameterValues, progressListener, true);
+			HttpURLConnection connection = getConnection(context, url, parameterNames, parameterValues, progressListener, true, verify);
 			in = getInputStreamFromConnection(connection);
 
 			String contentType = connection.getContentType();
@@ -1776,26 +1779,26 @@ public class RESTMusicService implements MusicService {
         }
 
         String url = getRestUrl(context, method);
-        return getReaderForURL(context, url, parameterNames, parameterValues, minNetworkTimeout, progressListener, throwErrors);
+        return getReaderForURL(context, url, parameterNames, parameterValues, minNetworkTimeout, progressListener, throwErrors, Util.shouldVerifyServerCert(context));
     }
 
-	private Reader getReaderForURL(Context context, String url, List<String> parameterNames, List<Object> parameterValues, ProgressListener progressListener) throws Exception {
-		return getReaderForURL(context, url, parameterNames, parameterValues, progressListener, true);
+	private Reader getReaderForURL(Context context, String url, List<String> parameterNames, List<Object> parameterValues, ProgressListener progressListener, boolean verify) throws Exception {
+		return getReaderForURL(context, url, parameterNames, parameterValues, progressListener, true, verify);
 	}
-	private Reader getReaderForURL(Context context, String url, List<String> parameterNames, List<Object> parameterValues, ProgressListener progressListener, boolean throwErrors) throws Exception {
-		return getReaderForURL(context, url, parameterNames, parameterValues, 0, progressListener, throwErrors);
+	private Reader getReaderForURL(Context context, String url, List<String> parameterNames, List<Object> parameterValues, ProgressListener progressListener, boolean throwErrors, boolean verify) throws Exception {
+		return getReaderForURL(context, url, parameterNames, parameterValues, 0, progressListener, throwErrors, verify);
 	}
-    private Reader getReaderForURL(Context context, String url, List<String> parameterNames, List<Object> parameterValues, int minNetworkTimeout, ProgressListener progressListener, boolean throwErrors) throws Exception {
-		InputStream in = getInputStream(context, url, parameterNames, parameterValues, minNetworkTimeout, progressListener, throwErrors);
+    private Reader getReaderForURL(Context context, String url, List<String> parameterNames, List<Object> parameterValues, int minNetworkTimeout, ProgressListener progressListener, boolean throwErrors, boolean verify) throws Exception {
+		InputStream in = getInputStream(context, url, parameterNames, parameterValues, minNetworkTimeout, progressListener, throwErrors, verify);
 		return new InputStreamReader(in, Constants.UTF_8);
     }
 
 	// Helper classes to open a connection to a server
-	private InputStream getInputStream(Context context, String url, List<String> parameterNames, List<Object> parameterValues, ProgressListener progressListener, boolean throwsErrors) throws Exception {
-		return getInputStream(context, url, parameterNames, parameterValues, 0, progressListener, throwsErrors);
+	private InputStream getInputStream(Context context, String url, List<String> parameterNames, List<Object> parameterValues, ProgressListener progressListener, boolean throwsErrors, boolean verify) throws Exception {
+		return getInputStream(context, url, parameterNames, parameterValues, 0, progressListener, throwsErrors, verify);
 	}
-	private InputStream getInputStream(Context context, String url, List<String> parameterNames, List<Object> parameterValues, int minNetworkTimeout, ProgressListener progressListener, boolean throwsErrors) throws Exception {
-		HttpURLConnection connection = getConnection(context, url, parameterNames, parameterValues, minNetworkTimeout, progressListener, throwsErrors);
+	private InputStream getInputStream(Context context, String url, List<String> parameterNames, List<Object> parameterValues, int minNetworkTimeout, ProgressListener progressListener, boolean throwsErrors, boolean verify) throws Exception {
+		HttpURLConnection connection = getConnection(context, url, parameterNames, parameterValues, minNetworkTimeout, progressListener, throwsErrors, verify);
 		return getInputStreamFromConnection(connection);
 	}
 	private InputStream getInputStreamFromConnection(HttpURLConnection connection) throws Exception {
@@ -1807,26 +1810,26 @@ public class RESTMusicService implements MusicService {
 		return in;
 	}
 
-	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, Map<String, String> headers, int minNetworkTimeout) throws Exception {
-		return getConnection(context, url, parameterNames, parameterValues, headers, minNetworkTimeout, null, true);
+	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, Map<String, String> headers, int minNetworkTimeout, boolean verify) throws Exception {
+		return getConnection(context, url, parameterNames, parameterValues, headers, minNetworkTimeout, null, true, verify);
 	}
-	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, ProgressListener progressListener, boolean throwErrors) throws Exception {
-		return getConnection(context, url, parameterNames, parameterValues, 0, progressListener, throwErrors);
+	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, ProgressListener progressListener, boolean throwErrors, boolean verify) throws Exception {
+		return getConnection(context, url, parameterNames, parameterValues, 0, progressListener, throwErrors, verify);
 	}
-	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, int minNetworkTimeout, ProgressListener progressListener, boolean throwErrors) throws Exception {
-		return getConnection(context, url, parameterNames, parameterValues, null, minNetworkTimeout, progressListener, throwErrors);
+	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, int minNetworkTimeout, ProgressListener progressListener, boolean throwErrors, boolean verify) throws Exception {
+		return getConnection(context, url, parameterNames, parameterValues, null, minNetworkTimeout, progressListener, throwErrors, verify);
 	}
-	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, Map<String, String> headers, int minNetworkTimeout, ProgressListener progressListener, boolean throwErrors) throws Exception {
+	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, Map<String, String> headers, int minNetworkTimeout, ProgressListener progressListener, boolean throwErrors, boolean verify) throws Exception {
 		if(throwErrors) {
 			SharedPreferences prefs = Util.getPreferences(context);
 			int networkTimeout = Integer.parseInt(prefs.getString(Constants.PREFERENCES_KEY_NETWORK_TIMEOUT, SOCKET_READ_TIMEOUT_DEFAULT + ""));
-			return getConnectionDirect(context, url, parameterNames, parameterValues, headers, Math.max(minNetworkTimeout, networkTimeout));
+			return getConnectionDirect(context, url, parameterNames, parameterValues, headers, Math.max(minNetworkTimeout, networkTimeout), verify);
 		} else {
-			return getConnection(context, url, parameterNames, parameterValues, headers, minNetworkTimeout, progressListener, HTTP_REQUEST_MAX_ATTEMPTS, 0);
+			return getConnection(context, url, parameterNames, parameterValues, headers, minNetworkTimeout, progressListener, HTTP_REQUEST_MAX_ATTEMPTS, 0, verify);
 		}
 	}
 
-	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, Map<String, String> headers, int minNetworkTimeout, ProgressListener progressListener, int retriesLeft, int attempts) throws Exception {
+	private HttpURLConnection getConnection(Context context, String url, List<String> parameterNames, List<Object> parameterValues, Map<String, String> headers, int minNetworkTimeout, ProgressListener progressListener, int retriesLeft, int attempts, boolean verify) throws Exception {
 		SharedPreferences prefs = Util.getPreferences(context);
 		int networkTimeout = Integer.parseInt(prefs.getString(Constants.PREFERENCES_KEY_NETWORK_TIMEOUT, SOCKET_READ_TIMEOUT_DEFAULT + ""));
 		minNetworkTimeout = Math.max(minNetworkTimeout, networkTimeout);
@@ -1834,7 +1837,7 @@ public class RESTMusicService implements MusicService {
 		retriesLeft--;
 
 		try {
-			return getConnectionDirect(context, url, parameterNames, parameterValues, headers, minNetworkTimeout);
+			return getConnectionDirect(context, url, parameterNames, parameterValues, headers, minNetworkTimeout, verify);
 		} catch (IOException x) {
 			if(retriesLeft > 0) {
 				if (progressListener != null) {
@@ -1846,14 +1849,14 @@ public class RESTMusicService implements MusicService {
 				Thread.sleep(2000L);
 
 				minNetworkTimeout = (int) (minNetworkTimeout * 1.3);
-				return getConnection(context, url, parameterNames, parameterValues, headers, minNetworkTimeout, progressListener, retriesLeft, attempts);
+				return getConnection(context, url, parameterNames, parameterValues, headers, minNetworkTimeout, progressListener, retriesLeft, attempts, verify);
 			} else {
 				throw x;
 			}
 		}
 	}
 
-	private HttpURLConnection getConnectionDirect(Context context, String url, List<String> parameterNames, List<Object> parameterValues, Map<String, String> headers, int minNetworkTimeout) throws Exception {
+	private HttpURLConnection getConnectionDirect(Context context, String url, List<String> parameterNames, List<Object> parameterValues, Map<String, String> headers, int minNetworkTimeout, boolean verify) throws Exception {
 		// Add params to query
 		if (parameterNames != null) {
 			StringBuilder builder = new StringBuilder(url);
@@ -1872,10 +1875,10 @@ public class RESTMusicService implements MusicService {
 			Log.i(TAG, stripUrlInfo(rewrittenUrl));
 		}
 
-		return getConnectionDirect(context, rewrittenUrl, headers, minNetworkTimeout);
+		return getConnectionDirect(context, rewrittenUrl, headers, minNetworkTimeout, verify);
 	}
 
-	private HttpURLConnection getConnectionDirect(Context context, String url, Map<String, String> headers, int minNetworkTimeout) throws Exception {
+	private HttpURLConnection getConnectionDirect(Context context, String url, Map<String, String> headers, int minNetworkTimeout, boolean verify) throws Exception {
 		if(!hasInstalledGoogleSSL) {
 			try {
 				ProviderInstaller.installIfNeeded(context);
@@ -1907,15 +1910,17 @@ public class RESTMusicService implements MusicService {
 
 		if(connection instanceof HttpsURLConnection) {
 			HttpsURLConnection sslConnection = (HttpsURLConnection) connection;
-			sslConnection.setSSLSocketFactory(sslSocketFactory);
-			sslConnection.setHostnameVerifier(selfSignedHostnameVerifier);
+			sslConnection.setSSLSocketFactory(verify?sslSocketFactory:trustAllSslSocketFactory);
+			if(!verify) {
+				sslConnection.setHostnameVerifier(selfSignedHostnameVerifier);
+			}
 		}
 
 		SharedPreferences prefs = Util.getPreferences(context);
 		int instance = getInstance(context);
 		String username = prefs.getString(Constants.PREFERENCES_KEY_USERNAME + instance, null);
 		String password = prefs.getString(Constants.PREFERENCES_KEY_PASSWORD + instance, null);
-		String encoded = Base64.encodeToString((username + ":" + password).getBytes("UTF-8"), Base64.NO_WRAP);;
+		String encoded = Base64.encodeToString((username + ":" + password).getBytes("UTF-8"), Base64.NO_WRAP);
 		connection.setRequestProperty("Authorization", "Basic " + encoded);
 
 		// Force the connection to initiate
@@ -1926,7 +1931,7 @@ public class RESTMusicService implements MusicService {
 			String rewrittenUrl = rewriteUrlWithRedirect(context, url);
 			if(!rewrittenUrl.equals(url)) {
 				connection.disconnect();
-				return getConnectionDirect(context, rewrittenUrl, headers, minNetworkTimeout);
+				return getConnectionDirect(context, rewrittenUrl, headers, minNetworkTimeout, verify);
 			}
 		}
 
@@ -2015,9 +2020,10 @@ public class RESTMusicService implements MusicService {
 		}
 	}
 
-	public SSLSocketFactory getSSLSocketFactory() {
-		return sslSocketFactory;
+	public SSLSocketFactory getSSLSocketFactory(boolean verify) {
+		return verify ? sslSocketFactory:trustAllSslSocketFactory;
 	}
+
 	public HostnameVerifier getHostNameVerifier() {
 		return selfSignedHostnameVerifier;
 	}

@@ -198,6 +198,7 @@ public final class Util {
 		String userName = prefs.getString(Constants.PREFERENCES_KEY_USERNAME + newInstance, null);
 		String password = prefs.getString(Constants.PREFERENCES_KEY_PASSWORD + newInstance, null);
 		String musicFolderId = prefs.getString(Constants.PREFERENCES_KEY_MUSIC_FOLDER_ID + newInstance, null);
+		Boolean verifyServerCert = prefs.getBoolean(Constants.PREFERENCES_KEY_SERVER_VERIFY_CERT + newInstance, true);
 
 		// Store the +1 server details in the to be deleted instance
 		editor.putString(Constants.PREFERENCES_KEY_SERVER_KEY + instance, server);
@@ -206,7 +207,7 @@ public final class Util {
 		editor.putString(Constants.PREFERENCES_KEY_USERNAME + instance, userName);
 		editor.putString(Constants.PREFERENCES_KEY_PASSWORD + instance, password);
 		editor.putString(Constants.PREFERENCES_KEY_MUSIC_FOLDER_ID + instance, musicFolderId);
-
+		editor.putBoolean(Constants.PREFERENCES_KEY_SERVER_VERIFY_CERT + instance, verifyServerCert);
 		// Delete the +1 server instance
 		// Calling method will loop up to fill this in if +2 server exists
 		editor.putString(Constants.PREFERENCES_KEY_SERVER_KEY + newInstance, null);
@@ -215,6 +216,8 @@ public final class Util {
 		editor.putString(Constants.PREFERENCES_KEY_USERNAME + newInstance, null);
 		editor.putString(Constants.PREFERENCES_KEY_PASSWORD + newInstance, null);
 		editor.putString(Constants.PREFERENCES_KEY_MUSIC_FOLDER_ID + newInstance, null);
+		editor.putBoolean(Constants.PREFERENCES_KEY_SERVER_VERIFY_CERT + instance, true);
+
 		editor.commit();
 
 		if (instance == activeInstance) {
@@ -327,17 +330,25 @@ public final class Util {
 	public static String getRestUsername(Context context, String method) {
 		SharedPreferences prefs = getPreferences(context);
 		int instance = prefs.getInt(Constants.PREFERENCES_KEY_SERVER_INSTANCE, 1);
-		String Username = prefs.getString(Constants.PREFERENCES_KEY_USERNAME + instance, null);
-		return  Username;
+		String username = prefs.getString(Constants.PREFERENCES_KEY_USERNAME + instance, null);
+		return username;
 	}
 
-	public static void setRestCredentials(Context context, String method, String username, String password, String server) {
+	public static Boolean shouldVerifyServerCert(Context context) {
+		SharedPreferences prefs = getPreferences(context);
+		int instance = prefs.getInt(Constants.PREFERENCES_KEY_SERVER_INSTANCE, 1);
+		Boolean verifyCert = prefs.getBoolean(Constants.PREFERENCES_KEY_SERVER_VERIFY_CERT + instance, true);
+		return verifyCert;
+	}
+
+	public static void setRestCredentials(Context context, String method, String username, String password, String server, Boolean verifyServerCert) {
 		SharedPreferences prefs = getPreferences(context);
 		int instance = prefs.getInt(Constants.PREFERENCES_KEY_SERVER_INSTANCE, 1);
 		SharedPreferences.Editor editor = prefs.edit();
 		editor.putString(Constants.PREFERENCES_KEY_USERNAME + 1, username);
 		editor.putString(Constants.PREFERENCES_KEY_PASSWORD + 1, password);
 		editor.putString(Constants.PREFERENCES_KEY_SERVER_URL + 1, server);
+		editor.putBoolean(Constants.PREFERENCES_KEY_SERVER_VERIFY_CERT + 1, verifyServerCert);
 		editor.commit();
 	}
 
