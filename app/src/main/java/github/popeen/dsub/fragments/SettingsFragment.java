@@ -510,6 +510,12 @@ public class SettingsFragment extends PreferenceCompatFragment implements Shared
 		serverUrlPreference.setSummary(serverUrlPreference.getText());
 		screen.setSummary(serverUrlPreference.getText());
 
+		final CheckBoxPreference serverVerifyPreference = new CheckBoxPreference(context);
+		serverVerifyPreference.setKey(Constants.PREFERENCES_KEY_SERVER_VERIFY_CERT + instance);
+		serverVerifyPreference.setChecked(Util.shouldVerifyServerCert(context, instance));
+		serverVerifyPreference.setSummary(R.string.settings_server_verify_cert_summary);
+		serverVerifyPreference.setTitle(R.string.settings_server_verify_cert);
+
 		final EditTextPreference serverLocalNetworkSSIDPreference = new EditTextPreference(context) {
 			@Override
 			protected void onAddEditTextToDialogView(View dialogView, final EditText editText) {
@@ -624,6 +630,7 @@ public class SettingsFragment extends PreferenceCompatFragment implements Shared
 
 		screen.addPreference(serverNamePreference);
 		screen.addPreference(serverUrlPreference);
+		screen.addPreference(serverVerifyPreference);
 		screen.addPreference(serverInternalUrlPreference);
 		screen.addPreference(serverLocalNetworkSSIDPreference);
 		screen.addPreference(serverUsernamePreference);

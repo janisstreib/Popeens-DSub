@@ -718,4 +718,6 @@
 	<string name="login.hint.password">Password</string>
 	<string name="login.button.demo">Demo server</string>
 	<string name="login.button.signin">Sign in</string>
+	<string name="settings.server_verify_cert_summary">Disable, if you use a selfsigned server certificate</string>
+	<string name="settings.server_verify_cert">Verify Certificate</string>
 </resources>

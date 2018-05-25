@@ -337,6 +337,11 @@ public final class Util {
 	public static Boolean shouldVerifyServerCert(Context context) {
 		SharedPreferences prefs = getPreferences(context);
 		int instance = prefs.getInt(Constants.PREFERENCES_KEY_SERVER_INSTANCE, 1);
+		return shouldVerifyServerCert(context, instance);
+	}
+
+	public static boolean shouldVerifyServerCert(Context context, int instance) {
+		SharedPreferences prefs = getPreferences(context);
 		Boolean verifyCert = prefs.getBoolean(Constants.PREFERENCES_KEY_SERVER_VERIFY_CERT + instance, true);
 		return verifyCert;
 	}
