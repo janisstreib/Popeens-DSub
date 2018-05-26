@@ -54,6 +54,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import github.popeen.dsub.R;
 import github.popeen.dsub.activity.SettingsActivity;
+import github.popeen.dsub.activity.SubsonicActivity;
 import github.popeen.dsub.activity.SubsonicFragmentActivity;
 import github.popeen.dsub.adapter.DetailsAdapter;
 import github.popeen.dsub.domain.MusicDirectory;
@@ -345,7 +346,6 @@ public final class Util {
 		Boolean verifyCert = prefs.getBoolean(Constants.PREFERENCES_KEY_SERVER_VERIFY_CERT + instance, true);
 		return verifyCert;
 	}
-
 	public static void setRestCredentials(Context context, String method, String username, String password, String server, Boolean verifyServerCert) {
 		SharedPreferences prefs = getPreferences(context);
 		int instance = prefs.getInt(Constants.PREFERENCES_KEY_SERVER_INSTANCE, 1);
@@ -407,7 +407,6 @@ public final class Util {
 			builder.append("rest/");
 		}
 		builder.append(method).append(".view");
-		builder.append("?u=").append(username);
 		if(method != null && ServerInfo.canUseToken(context, instance)) {
 			int hash = (username + password).hashCode();
 			Pair<String, String> values = tokens.get(hash);
@@ -420,12 +419,13 @@ public final class Util {
 
 			builder.append("&s=").append(values.getFirst());
 			builder.append("&t=").append(values.getSecond());
-		} else {
-			// Slightly obfuscate password
+		}
+		/*else {
+			// Slightly obfuscate password FIXME!
 			password = "enc:" + Util.utf8HexEncode(password);
 
 			builder.append("&p=").append(password);
-		}
+		}*/
 
 		if(method != null && ServerInfo.isMadsonic6(context, instance)) {
 			builder.append("&v=").append(Constants.REST_PROTOCOL_VERSION_MADSONIC);
@@ -1531,4 +1531,5 @@ public final class Util {
 
 		return random;
 	}
+
 }
