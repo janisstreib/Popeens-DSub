@@ -39,6 +39,7 @@ import android.view.MenuItem;
 import android.view.View;
 
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -928,12 +929,13 @@ public class SubsonicFragmentActivity extends SubsonicActivity implements Downlo
 				String strUsername = ((EditText) login.findViewById(R.id.username)).getText().toString();
 				String strPassword = ((EditText) login.findViewById(R.id.password)).getText().toString();
 				String strServer = ((EditText) login.findViewById(R.id.server)).getText().toString();
+				boolean verifyServerCertificate = ((CheckBox)login.findViewById(R.id.verify_certificate)).isChecked();
 
 				if(strUsername.length() > 0 && strPassword.length() > 0 && strServer.length() > 0){
 				    if(!strServer.contains("http")){
 				        //TODO, add warning that the URL needs to contain https or http alt add them and check connection status to find which to use
                     }
-					Util.setRestCredentials(SubsonicFragmentActivity.this, null, strUsername, strPassword, strServer, true);
+					Util.setRestCredentials(SubsonicFragmentActivity.this, null, strUsername, strPassword, strServer, verifyServerCertificate);
 					login.dismiss();
 					//recreate();
 					SubsonicFragmentActivity.super.restart();

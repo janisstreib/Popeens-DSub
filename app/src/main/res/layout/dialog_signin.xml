@@ -25,6 +25,14 @@
         android:layout_marginBottom="4dp"
         android:fontFamily="sans-serif"
         android:hint="@string/login.hint.server"/>
+
+    <CheckBox
+        android:id="@+id/verify_certificate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        android:text="@string/settings.server_verify_cert" />
+
     <EditText
         android:id="@+id/username"
         android:layout_width="match_parent"
