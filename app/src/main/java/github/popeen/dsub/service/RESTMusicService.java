@@ -87,6 +87,7 @@ import java.util.zip.GZIPInputStream;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
@@ -1838,6 +1839,8 @@ public class RESTMusicService implements MusicService {
 
 		try {
 			return getConnectionDirect(context, url, parameterNames, parameterValues, headers, minNetworkTimeout, verify);
+		} catch (SSLException x) {
+			throw x;
 		} catch (IOException x) {
 			if(retriesLeft > 0) {
 				if (progressListener != null) {
